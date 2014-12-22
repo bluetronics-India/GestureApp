@@ -1,6 +1,10 @@
 from cv2 import *
 import numpy as np
-import os
+
+"""
+for each contour get area and something with the greatest area is probably IMPORTANT so only that area will be
+given importance to -- NEED TO TEST
+"""
 
 headimg = imread('head_shape.jpg')
 
@@ -10,11 +14,6 @@ def getContours(image):
     headimg_contours,headimg_hierarchy = findContours(thresh,2,1)
 
     return headimg_contours
-
-def clamp(n):
-    return sorted([0, n, 99])[1]
-
-def vol(l): os.system("osascript -e 'set volume output volume "+str(l)+"'")
 
 headContours = getContours(headimg)
 
@@ -33,9 +32,7 @@ cap = VideoCapture(0)
 
 while( cap.isOpened() ) :
 
-    (T,img) = cap.read()
-
-    img = flip(img,1)
+    (T,img) = cap.read(); img = flip(img,1)
 
     # Convert image to YCrCb - best for skin detection
     imgYCrCb = cvtColor(img, COLOR_BGR2YCR_CB)
@@ -45,6 +42,10 @@ while( cap.isOpened() ) :
 
     # Find region with skin tone in YCrCb image
     skinRegion = inRange(blur_imgYCrCb, min_YCrCb, max_YCrCb)
+
+    #dialate and erode for better contours
+    skinRegion = erode(skinRegion, getStructuringElement(MORPH_ELLIPSE,(29,29)))
+    skinRegion = dilate(skinRegion, getStructuringElement(MORPH_ELLIPSE,(29,29)))
 
     contours, hierarchy = findContours(skinRegion, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
 
@@ -61,29 +62,43 @@ while( cap.isOpened() ) :
 
     # draw contours
     for i, c in enumerate(contours_filtered):
+        # print "area of",i,"is:",contourArea(c)
         drawContours(contours_drawing, contours_filtered, i, (255, 255, 0), 1)
         drawContours(img, contours_filtered, i, (255, 255, 0), 3)
 
-    tracking_rect_coords=[]
     for cnt in contours_filtered:
-        x,y,w,h = boundingRect(cnt)
-        w,h=(100,100)
-        x+=100;y+=100
-        tracking_rect_coords += ((clamp((x-100)/10),(y-100)/10),)
-        vol(clamp((x-100)/10))
-        # print clamp(x)
-        rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
 
-    print tracking_rect_coords
-    # vol(tracking_rect_coords[0][0])
+        hull = convexHull(cnt)
+        drawContours(img,[hull],0,(150,55,140),2)
 
+        M = moments(cnt) # to find center of mass
+        if(M["m00"]!=0):
+            c_x = int(M["m10"]/M["m00"])
+            c_y = int(M["m01"]/M["m00"])
+            #two circles for the cool target effect
+            circle(img, (c_x,c_y), 5, (0,0,255), -1)
+            circle(img, (c_x,c_y), 15, (254,0,0), 3)
+
+        cnt = approxPolyDP(cnt,0.01*arcLength(cnt,True),True)
+        hull = convexHull(cnt,returnPoints=False)
+        defects = convexityDefects(cnt,hull)
+        # print len(defects) # approximates num of fingers
+
+        if len(defects) != 0:
+            for i in range(defects.shape[0]):
+                s,e,f,d = defects[i,0]
+                start = tuple(cnt[s][0])
+                end = tuple(cnt[e][0])
+                far = tuple(cnt[f][0])
+                # line(img,start,end,[0,255,0],2)
+                circle(img,far,5,[0,0,255],-1)
 
 
 
     # imshow('contours', contours_drawing)
-    # imshow('YCrCb', imgYCrCb)
+    imshow('YCrCb', blur_imgYCrCb)
     imshow('img', img)
-    # imshow('head_shape', headimg)
+    # imshow('skinRegion', skinRegion)
 
     #
     if waitKey(1) & 0xFF == ord('q'):
