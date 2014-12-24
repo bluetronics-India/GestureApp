@@ -58,6 +58,7 @@ while( cap.isOpened() ) :
         for j in contours_IGNORE:
             diff = matchShapes(j[0],c,1,0.0)
             if diff >= MIN_DIFF_IN_TWO_CONTOURS and int(contourArea(c)) > MIN_CONTOUR_AREA:
+                # c = approxPolyDP(c,0.015*arcLength(c,True),True)
                 contours_filtered.append(c)
 
     # draw contours
@@ -68,6 +69,9 @@ while( cap.isOpened() ) :
 
     for cnt in contours_filtered:
 
+        x,y,w,h = boundingRect(cnt)
+        rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
+
         hull = convexHull(cnt)
         drawContours(img,[hull],0,(150,55,140),2)
 
@@ -75,31 +79,30 @@ while( cap.isOpened() ) :
         if(M["m00"]!=0):
             c_x = int(M["m10"]/M["m00"])
             c_y = int(M["m01"]/M["m00"])
-            #two circles for the cool target effect
-            circle(img, (c_x,c_y), 5, (0,0,255), -1)
             circle(img, (c_x,c_y), 15, (254,0,0), 3)
 
-        cnt = approxPolyDP(cnt,0.01*arcLength(cnt,True),True)
+        cnt = approxPolyDP(cnt,0.015*arcLength(cnt,True),True)
         hull = convexHull(cnt,returnPoints=False)
         defects = convexityDefects(cnt,hull)
-        # print len(defects) # approximates num of fingers
 
-        if len(defects) != 0:
+        if str(defects) != "None":
             for i in range(defects.shape[0]):
                 s,e,f,d = defects[i,0]
                 start = tuple(cnt[s][0])
                 end = tuple(cnt[e][0])
                 far = tuple(cnt[f][0])
-                # line(img,start,end,[0,255,0],2)
                 circle(img,far,5,[0,0,255],-1)
+
+            if len(defects) == 5 or len(defects) == 6:
+                print "open hand"
+            else: print "close hand"
 
 
 
     # imshow('contours', contours_drawing)
-    imshow('YCrCb', blur_imgYCrCb)
+    # imshow('YCrCb', blur_imgYCrCb)
     imshow('img', img)
     # imshow('skinRegion', skinRegion)
 
     #
-    if waitKey(1) & 0xFF == ord('q'):
-        break
+    if waitKey(1) & 0xFF == ord('q'): break
