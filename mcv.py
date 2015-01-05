@@ -25,7 +25,7 @@ MIN_CONTOUR_AREA = 40000
 MIN_DIFF_IN_TWO_CONTOURS = 0.3
 
 # Constants for finding range of skin color in YCrCb
-min_YCrCb = np.array([0,133,77], np.uint8) # change to uppercase
+min_YCrCb = np.array([0,133,77], np.uint8)
 max_YCrCb = np.array([255,173,127], np.uint8)
 
 cap = VideoCapture(0)
@@ -100,7 +100,7 @@ while( cap.isOpened() ) :
 
 
     # imshow('contours', contours_drawing)
-    # imshow('YCrCb', blur_imgYCrCb)
+    imshow('YCrCb', blur_imgYCrCb)
     imshow('img', img)
     # imshow('skinRegion', skinRegion)
 
